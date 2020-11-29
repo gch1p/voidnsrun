@@ -1,13 +1,13 @@
 CC := gcc
 
-PROGRAM = glibcrun
+PROGRAM = voidnsrun
 CFLAGS  = -O2 -std=c99 -Wall -W
 LDFLAGS =
 
 INSTALL = /usr/bin/env install
 PREFIX	= /usr/local
 
-OBJS = glibcrun.o
+OBJS = voidnsrun.o
 
 all: $(PROGRAM)
 
