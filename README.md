@@ -1,7 +1,7 @@
 # voidnsrun
 
 `voidnsrun` is utility for launching programs in an isolated namespace with
-alternative `/usr` tree. Its primary goal is to run glibc-linked binaries in
+alternative `/usr` tree. Its primary goal is to run glibc programs in
 musl-libc Void Linux environments or vice-versa.
 
 It creates a new private mount namespace, transparently substitutes `/usr` and 
@@ -53,7 +53,7 @@ If you want to mount something else, use `-m` argument.
 
 ## Example
 
-Let's imagine you want to use some proprietary glibc-linked app on your
+Let's imagine you want to use some proprietary glibc app on your
 musl-libc Void Linux box. Let it be Vivaldi browser for the example. You
 unpacked it to `/opt/vivaldi` and it doesn't work, obviously.
 
