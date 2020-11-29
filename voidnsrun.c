@@ -32,15 +32,15 @@ void usage(const char *progname)
 	printf("Usage: %s [OPTIONS] [PROGRAM [ARGS]]\n", progname);
 	printf("\n"
 			"Options:\n"
-			"	-h:        print this help\n"
 			"	-m <path>: add bind mount\n"
 			"	-r <path>: altroot path. If this option is not present,\n"
 			"	           %s environment variable is used.\n"
+			"	-h:        print this help\n"
 			"	-v:        print version\n",
 			var_name);
 }
 
-bool mount_list(
+bool mountlist(
 	const char *dirptr,
 	size_t dirlen,
 	const char **mountpoints,
@@ -54,14 +54,14 @@ bool mount_list(
 			ERROR("error: path %s%s is too large.\n", dirptr, mountpoints[i]);
 			return false;
 		}
+
 		strcpy(buf, dirptr);
 		strcat(buf, mountpoints[i]);
 		if (!isdir(buf)) {
-			if (!ignore_missing) {
-				ERROR("error: source mount dir %s does not exists.\n", buf);
-				return false;
-			} else
+			if (ignore_missing)
 				continue;
+			ERROR("error: source mount dir %s does not exists.\n", buf);
+			return false;
 		}
 		if (!isdir(mountpoints[i])) {
 			ERROR("error: mountpoint %s does not exists.\n", mountpoints[i]);
@@ -139,12 +139,10 @@ int main(int argc, char **argv)
 
 	/* Mount stuff from altroot to our private namespace. */
 	const char *mountpoints[] = {"/usr", "/var/db/xbps", "/etc/xbps.d"};
-	
-	if (!mount_list(dir, dirlen, mountpoints, ARRAY_SIZE(mountpoints), true))
+	if (!mountlist(dir, dirlen, mountpoints, ARRAY_SIZE(mountpoints), true))
 		return 1;
-	
 	if (usermounts_count > 0 && 
-		!mount_list(dir, dirlen, usermounts, usermounts_count, false))
+		!mountlist(dir, dirlen, usermounts, usermounts_count, false))
 		return 1;
 
 	/* Drop root. */

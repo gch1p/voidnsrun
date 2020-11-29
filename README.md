@@ -26,10 +26,10 @@ should handle it.
 voidnsrun [OPTIONS] [PROGRAM [ARGS]]
 
 Options:
-	-h:        print this help
 	-m <path>: add bind mount
 	-r <path>: altroot path. If this option is not present,
 	           VOIDNSRUN_DIR environment variable is used.
+	-h:        print this help
 	-v:        print version
 ```
 
