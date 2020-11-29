@@ -29,7 +29,7 @@ bool isdir(const char *s)
 
 void usage(const char *progname)
 {
-	printf("Usage: %s [OPTIONS] [PROGRAM [ARGS]]\n", progname);
+	printf("Usage: %s [OPTIONS] PROGRAM [ARGS]\n", progname);
 	printf("\n"
 			"Options:\n"
 			"	-m <path>: add bind mount\n"

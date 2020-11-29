@@ -23,7 +23,7 @@ should handle it.
 ## Usage
 
 ```
-voidnsrun [OPTIONS] [PROGRAM [ARGS]]
+voidnsrun [OPTIONS] PROGRAM [ARGS]
 
 Options:
 	-m <path>: add bind mount
