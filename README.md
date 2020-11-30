@@ -100,11 +100,9 @@ libglib-devel-2.66.2_1	/usr/lib/libgobject-2.0.so -> /usr/lib/libgobject-2.0.so.
 ```
 
 Sync repos and install `glib`. You can use **voidnsrun** for this purpose too.
-Also, I think you should bind `/etc` and `/var` while using `xbps-install` via
-**voidnsrun**, to not mess with your main system files.
 ```
-$ sudo voidnsrun -r /glibc -m /etc -m /var xbps-install -Su
-$ sudo voidnsrun -r /glibc -m /etc -m /var xbps-install glib
+$ sudo voidnsrun -r /glibc xbps-install -Su
+$ sudo voidnsrun -r /glibc xbps-install glib
 ```
 
 Try launching vivaldi again:
@@ -121,14 +119,14 @@ make sure to install fonts related packages: `xorg-fonts`, `freetype`,
 
 ## Changelog
 
-##### 1.1
+#### 1.1
 
 - Bind whole `/etc` and `/var` when launching `xbps-install`, `xbps-remove` or 
   `xbps-reconfigure`.
 
-##### 1.0
+#### 1.0
 
-Initial release.
+- Initial release.
 
 ## License
 
