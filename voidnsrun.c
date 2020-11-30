@@ -78,20 +78,20 @@ bool mountlist(
 
 bool isxbpscommand(const char *s)
 {
-    const char *commands[] = {
-        "/xbps-install",
-        "/xbps-remove",
-        "/xbps-reconfigure"
-    };
-    for (size_t i = 0; i < ARRAY_SIZE(commands); i++) {
-        const char *command = commands[i];
-        if (!strcmp(s, command+1))
-            return true;
-        char *slash = strrchr(s, '/');
-        if (slash && !strcmp(slash, command))
-            return true;
-    }
-    return false;
+	const char *commands[] = {
+		"/xbps-install",
+		"/xbps-remove",
+		"/xbps-reconfigure"
+	};
+	for (size_t i = 0; i < ARRAY_SIZE(commands); i++) {
+		const char *command = commands[i];
+		if (!strcmp(s, command+1))
+			return true;
+		char *slash = strrchr(s, '/');
+		if (slash && !strcmp(slash, command))
+			return true;
+	}
+	return false;
 }
 
 int main(int argc, char **argv)
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 		usage(argv[0]);
 		return 0;
 	}
-	
+
 	int result;
 	char *dir = NULL;
 	size_t dirlen;
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 		ERROR("error: %s is not a directory.\n", dir);
 		return 1;
 	}
-	
+
 	dirlen = strlen(dir);
 
 	/* Do the unshare magic. */
@@ -158,16 +158,16 @@ int main(int argc, char **argv)
 	/* Mount stuff from altroot to our private namespace. */
 	const char *mountpoints[3] = {"/usr", NULL, NULL};
 	if (isxbpscommand(argv[optind])) {
-	    mountpoints[1] = "/var";
-        mountpoints[2] = "/etc";
+		mountpoints[1] = "/var";
+		mountpoints[2] = "/etc";
 	} else {
-	    mountpoints[1] = "/var/db/xbps";
-	    mountpoints[2] = "/etc/xbps.d";
+		mountpoints[1] = "/var/db/xbps";
+		mountpoints[2] = "/etc/xbps.d";
 	}
 	if (!mountlist(dir, dirlen, mountpoints, ARRAY_SIZE(mountpoints), true))
 		return 1;
 	if (usermounts_num > 0 &&
-        !mountlist(dir, dirlen, usermounts, usermounts_num, false))
+		!mountlist(dir, dirlen, usermounts, usermounts_num, false))
 		return 1;
 
 	/* Drop root. */
