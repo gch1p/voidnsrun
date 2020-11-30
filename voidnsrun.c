@@ -76,6 +76,24 @@ bool mountlist(
 	return true;
 }
 
+bool isxbpscommand(const char *s)
+{
+    const char *commands[] = {
+        "/xbps-install",
+        "/xbps-remove",
+        "/xbps-reconfigure"
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(commands); i++) {
+        const char *command = commands[i];
+        if (!strcmp(s, command+1))
+            return true;
+        char *slash = strrchr(s, '/');
+        if (slash && !strcmp(slash, command))
+            return true;
+    }
+    return false;
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
@@ -87,7 +105,7 @@ int main(int argc, char **argv)
 	char *dir = NULL;
 	size_t dirlen;
 	const char *usermounts[USERMOUNTS_MAX] = {0};
-	int usermounts_count = 0;
+	int usermounts_num = 0;
 	int c;
 	while ((c = getopt(argc, argv, "vhm:r:")) != -1) {
 		switch (c) {
@@ -101,8 +119,8 @@ int main(int argc, char **argv)
 				dir = optarg;
 				break;
 			case 'm':
-				if (usermounts_count < USERMOUNTS_MAX) {
-					usermounts[usermounts_count++] = optarg;
+				if (usermounts_num < USERMOUNTS_MAX) {
+					usermounts[usermounts_num++] = optarg;
 					break;
 				} else {
 					ERROR("error: only up to %d user mounts allowed.\n",
@@ -138,11 +156,18 @@ int main(int argc, char **argv)
 	}
 
 	/* Mount stuff from altroot to our private namespace. */
-	const char *mountpoints[] = {"/usr", "/var/db/xbps", "/etc/xbps.d"};
+	const char *mountpoints[3] = {"/usr", NULL, NULL};
+	if (isxbpscommand(argv[optind])) {
+	    mountpoints[1] = "/var";
+        mountpoints[2] = "/etc";
+	} else {
+	    mountpoints[1] = "/var/db/xbps";
+	    mountpoints[2] = "/etc/xbps.d";
+	}
 	if (!mountlist(dir, dirlen, mountpoints, ARRAY_SIZE(mountpoints), true))
 		return 1;
-	if (usermounts_count > 0 && 
-		!mountlist(dir, dirlen, usermounts, usermounts_count, false))
+	if (usermounts_num > 0 &&
+        !mountlist(dir, dirlen, usermounts, usermounts_num, false))
 		return 1;
 
 	/* Drop root. */
