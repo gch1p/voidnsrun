@@ -117,6 +117,21 @@ end, it will work. (If it's not, then something's still missing. In particular,
 make sure to install fonts related packages: `xorg-fonts`, `freetype`,
 `fontconfig`, `libXft`.)
 
+## FAQ
+
+#### Q: `sudo voidnsrun xbps-install` exits with "environment variable VOIDNSRUN_DIR not found" error
+
+A: Add this line to `/etc/sudoers`:
+```
+Defaults env_keep += "VOIDNSRUN_DIR"
+```
+
+#### Q: Why applications launched with voidnsrun do not see my fonts?
+
+A: If you installed fonts on your main system, applications that run in the mount
+namespace can't see them because of custom `/usr` directory. You need to install
+them again into the altroot directory.
+
 ## Changelog
 
 #### 1.1
