@@ -5,9 +5,7 @@
 #define USER_LISTS_MAX 50
 #define CONTAINER_DIR_VAR "VOIDNSRUN_DIR"
 #define UNDO_BIN_VAR "VOIDNSUNDO_BIN"
-#define SOCK_DIR_VAR "VOIDNSRUN_SOCK_DIR"
-#define SOCK_DIR_DEFAULT "/run/voidnsrun"
-#define SOCK_NAME "/sock"
+#define SOCK_PATH "/run/voidnsrun/sock"
 #define VOIDNSUNDO_NAME "voidnsundo"
 
 #endif //VOIDNSRUN_CONFIG_H

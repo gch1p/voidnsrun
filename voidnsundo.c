@@ -6,7 +6,6 @@
 #include <libgen.h>
 #include <stdbool.h>
 #include <getopt.h>
-#include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sched.h>
@@ -25,9 +24,6 @@ void usage(const char *progname)
     printf("Usage: %s [OPTIONS] PROGRAM [ARGS]\n", progname);
     printf("\n"
            "Options:\n"
-           "    -s:        Socket directory path. When this option is not present,\n"
-           "               " SOCK_DIR_VAR " environment variable is used. If both are\n"
-           "               missing, defaults to " SOCK_DIR_DEFAULT ".\n"
            "    -V:        Verbose output.\n"
            "    -h:        Print this help.\n"
            "    -v:        Print version.\n");
@@ -37,7 +33,6 @@ int main(int argc, char **argv)
 {
     bool binded = strcmp(basename(argv[0]), VOIDNSUNDO_NAME) != 0;
     int c;
-    char *sock_dir = NULL;
     int sock_fd = -1;
     int exit_code = 1;
     char realpath_buf[PATH_MAX];
@@ -56,9 +51,6 @@ int main(int argc, char **argv)
             case 'h':
                 usage(argv[0]);
                 return 0;
-            case 's':
-                sock_dir = optarg;
-                break;
             case 'V':
                 g_verbose = true;
                 break;
@@ -77,25 +69,6 @@ int main(int argc, char **argv)
         /* DEBUG("/proc/self/exe points to %s\n", realpath_buf); */
     }
 
-    /* Check socket directory. */
-    DIR *dirptr = NULL;
-    if (!sock_dir)
-        sock_dir = getenv(SOCK_DIR_VAR);
-    if (!sock_dir)
-        sock_dir = SOCK_DIR_DEFAULT;
-    if (strlen(sock_dir) > SOCK_DIR_PATH_MAX)
-        ERROR_EXIT("error: socket directory path is too long.\n");
-    if (!isdir(sock_dir))
-        ERROR_EXIT("error: %s is not a directory.\n", sock_dir);
-    if (access(sock_dir, F_OK) == -1) {
-        ERROR_EXIT("error: failed to access socket directory: %s.\n",
-                   strerror(errno));
-    } else {
-        if ((dirptr = opendir(sock_dir)) == NULL)
-            ERROR_EXIT("error: %s is not a directory.\n", sock_dir);
-    }
-    DEBUG("sock_dir=%s\n", sock_dir);
-
     /* Get current working directory. */
     getcwd(cwd, PATH_MAX);
     DEBUG("cwd=%s\n", cwd);
@@ -107,8 +80,7 @@ int main(int argc, char **argv)
 
     struct sockaddr_un sock_addr = {0};
     sock_addr.sun_family  = AF_UNIX;
-    strcpy(sock_addr.sun_path, sock_dir);
-    strcat(sock_addr.sun_path, SOCK_NAME);
+    strncpy(sock_addr.sun_path, SOCK_PATH, 108);
 
     if (connect(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1)
         ERROR_EXIT("connect: %s\n", strerror(errno));
@@ -144,9 +116,6 @@ int main(int argc, char **argv)
     exit_code = 0;
 
 end:
-    if (dirptr != NULL)
-        closedir(dirptr);
-
     if (sock_fd != -1)
         close(sock_fd);
 

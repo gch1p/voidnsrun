@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <dirent.h>
 #include <signal.h>
+#include <libgen.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -38,9 +39,6 @@ void usage(const char *progname)
             "               " UNDO_BIN_VAR " environment variable is used.\n"
             "    -i:        Don't treat missing source or target for an added mount\n"
             "               as an error.\n"
-            "    -s:        Socket directory path. When this option is not present,\n"
-            "               " SOCK_DIR_VAR " environment variable is used. If both are\n"
-            "               missing, defaults to " SOCK_DIR_DEFAULT ".\n"
             "    -V:        Verbose output.\n"
             "    -h:        Print this help.\n"
             "    -v:        Print version.\n",
@@ -114,8 +112,8 @@ int main(int argc, char **argv)
 
     int nsfd = -1;
     char *dir = NULL;
+    char buf[PATH_MAX];
     char *undo_bin = NULL;
-    char *sock_dir = NULL;
     int sock_fd = -1, sock_conn = -1;
     size_t dirlen;
     int c;
@@ -135,7 +133,7 @@ int main(int argc, char **argv)
     struct intarray tounlink;
     intarray_alloc(&tounlink, USER_LISTS_MAX);
 
-    while ((c = getopt(argc, argv, "vhm:r:u:U:is:V")) != -1) {
+    while ((c = getopt(argc, argv, "vhm:r:u:U:iV")) != -1) {
         switch (c) {
         case 'v':
             printf("%s\n", PROG_VERSION);
@@ -151,9 +149,6 @@ int main(int argc, char **argv)
             break;
         case 'U':
             undo_bin = optarg;
-            break;
-        case 's':
-            sock_dir = optarg;
             break;
         case 'V':
             g_verbose = true;
@@ -217,19 +212,16 @@ int main(int argc, char **argv)
                    strerror(errno));
 
     /* Check socket directory. */
-    if (!sock_dir)
-        sock_dir = getenv(SOCK_DIR_VAR);
-    if (!sock_dir)
-        sock_dir = SOCK_DIR_DEFAULT;
-    if (strlen(sock_dir) > SOCK_DIR_PATH_MAX)
-        ERROR_EXIT("error: socket directory path is too long.\n");
-
+    strncpy(buf, SOCK_PATH, PATH_MAX);
+    char *sock_dir = dirname(buf);
     if (access(sock_dir, F_OK) == -1) {
         if (mkdir(sock_dir, 0700) == -1)
             ERROR_EXIT("error: failed to create %s directory.\n", sock_dir);
     } else {
         if ((dirptr = opendir(sock_dir)) == NULL)
             ERROR_EXIT("error: %s is not a directory.\n", sock_dir);
+        if (exists(SOCK_PATH) && unlink(SOCK_PATH) == -1)
+            ERROR_EXIT("failed to unlink %s: %s", SOCK_PATH, strerror(errno));
     }
     DEBUG("sock_dir=%s\n", sock_dir);
 
@@ -263,7 +255,7 @@ int main(int argc, char **argv)
         ERROR_EXIT("error: some undo mounts failed.\n");
 
     /* Mount sock_dir as tmpfs. It will only be visible in this namespace. */
-    if (mount("tmpfs", sock_dir, "tmpfs", 0, NULL) == -1)
+    if (mount("tmpfs", sock_dir, "tmpfs", 0, "size=4k,mode=0700,uid=0,gid=0") == -1)
         ERROR_EXIT("mount: error mounting tmpfs in %s.\n", sock_dir);
 
     /* Fork. */
@@ -297,8 +289,7 @@ int main(int argc, char **argv)
 
         struct sockaddr_un sock_addr = {0};
         sock_addr.sun_family = AF_UNIX;
-        strcpy(sock_addr.sun_path, sock_dir);
-        strcat(sock_addr.sun_path, SOCK_NAME);
+        strncpy(sock_addr.sun_path, SOCK_PATH, 108);
 
         if (bind(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1)
             ERROR_EXIT("bind: %s\n", strerror(errno));
@@ -312,7 +303,7 @@ int main(int argc, char **argv)
             send_fd(sock_conn, nsfd);
         }
     } else {
-        /* Parent process. Dropping root rights. */
+        /* Parent process. Drop root rights. */
         uid_t uid = getuid();
         gid_t gid = getgid();
 
@@ -326,7 +317,7 @@ int main(int argc, char **argv)
         if (chdir(cwd) == -1)
             DEBUG("chdir: %s\n", strerror(errno));
 
-        /* Launching program. */
+        /* Launch program. */
         if (execvp(argv[optind], (char *const *)argv+optind) == -1)
             ERROR_EXIT("execvp(%s): %s\n", argv[optind], strerror(errno));
     }
