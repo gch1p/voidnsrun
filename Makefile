@@ -16,10 +16,10 @@ voidnsrun: voidnsrun.o utils.o
 voidnsundo: voidnsundo.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-testserver: testserver.o utils.o
+testserver: test/testserver.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-testclient: testclient.o utils.o
+testclient: test/testclient.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 install: voidnsrun voidnsundo
@@ -27,7 +27,7 @@ install: voidnsrun voidnsundo
 	chmod u+s $(PREFIX)/bin/voidnsrun $(PREFIX)/bin/voidnsundo
 
 clean:
-	rm -f *.o voidnsrun voidnsundo testserver testclient
+	rm -f *.o test/*.o voidnsrun voidnsundo testserver testclient
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -I. -o $@
