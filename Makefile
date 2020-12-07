@@ -1,25 +1,33 @@
 CC := gcc
 
-PROGRAM = voidnsrun
 CFLAGS  = -O2 -std=c99 -Wall -W
 LDFLAGS =
 
 INSTALL = /usr/bin/env install
 PREFIX	= /usr/local
 
-OBJS = voidnsrun.o
+all: voidnsrun voidnsundo
 
-all: $(PROGRAM)
+test: testserver testclient
 
-$(PROGRAM): $(OBJS)
+voidnsrun: voidnsrun.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-install: $(PROGRAM)
-	$(INSTALL) $(PROGRAM) $(PREFIX)/bin
-	chmod u+s $(PREFIX)/bin/${PROGRAM}
+voidnsundo: voidnsundo.o utils.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+testserver: testserver.o utils.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+testclient: testclient.o utils.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+install: voidnsrun voidnsundo
+	$(INSTALL) voidnsrun voidnsundo $(PREFIX)/bin
+	chmod u+s $(PREFIX)/bin/voidnsrun $(PREFIX)/bin/voidnsundo
 
 clean:
-	rm -f $(OBJS) $(PROGRAM)
+	rm -f *.o voidnsrun voidnsundo testserver testclient
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -I. -o $@
