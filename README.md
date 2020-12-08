@@ -272,7 +272,7 @@ Bitcoin. Contact me if you find something.
 #### 1.2
 
 - Added **voidnsundo** utility for spawning programs in the parent mount
-  namespace from withing the namespace created by **voidnsrun**.
+  namespace from within the namespace created by **voidnsrun**.
 - Restore current working directory after changing namespace.
 
 #### 1.1
