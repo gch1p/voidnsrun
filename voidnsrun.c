@@ -55,8 +55,11 @@ size_t mount_dirs(const char *source_prefix, size_t source_prefix_len, struct st
             continue;
         }
 
+        /* Should be safe as we just checked that total length of source_prefix
+         * and targets->list[i] is no more than PATH_MAX-1. */
         strcpy(buf, source_prefix);
         strcat(buf, targets->list[i]);
+
         if (!isdir(buf)) {
             ERROR("error: source mount dir %s does not exists.\n", buf);
             continue;
@@ -79,6 +82,9 @@ size_t mount_undo(const char *source, const struct strarray *targets, struct int
 {
     int successful = 0;
     for (size_t i = 0; i < targets->end; i++) {
+        /* If the mount point does not exist, create an empty file, otherwise
+         * mount() call will fail. In this case, remember which files we have
+         * created to unlink() them before exit. */
         if (!exists(targets->list[i])) {
             if (mkfile(targets->list[i]))
                 intarray_append(created, i);
@@ -111,7 +117,7 @@ int main(int argc, char **argv)
 
     int nsfd = -1;
     char *dir = NULL;
-    char buf[PATH_MAX];
+    char buf[PATH_MAX*2];
     char *undo_bin = NULL;
     int sock_fd = -1, sock_conn = -1;
     size_t dirlen;
@@ -129,8 +135,10 @@ int main(int argc, char **argv)
     struct strarray undo_mounts;
     strarray_alloc(&undo_mounts, USER_LISTS_MAX);
 
-    struct intarray tounlink;
-    intarray_alloc(&tounlink, USER_LISTS_MAX);
+    /* List of indexes of items in the undo_mounts array. See comments in
+     * mount_undo() function for more info. */
+    struct intarray to_unlink;
+    intarray_alloc(&to_unlink, USER_LISTS_MAX);
 
     while ((c = getopt(argc, argv, "vhm:r:u:U:iV")) != -1) {
         switch (c) {
@@ -184,34 +192,52 @@ int main(int argc, char **argv)
         ERROR_EXIT("error: %s is not a directory.\n", dir);
 
     dirlen = strlen(dir);
+    if (dirlen >= PATH_MAX)
+        ERROR_EXIT("error: container's path is too long.\n");
 
     DEBUG("dir=%s\n", dir);
 
-    /* Get undo binary path, if needed. */
+    /* Get voidnsundo path, if needed. */
     if (undo_mounts.end > 0) {
         if (!undo_bin)
             undo_bin = getenv(UNDO_BIN_VAR);
         if (!undo_bin) {
             ERROR_EXIT("error: environment variable %s not found.\n",
                 UNDO_BIN_VAR);
-        } else if (strlen(undo_bin) > PATH_MAX)
+        }
+
+        size_t undo_bin_len = strlen(undo_bin);
+        if (undo_bin_len >= PATH_MAX)
             ERROR_EXIT("error: undo binary path is too long.\n");
 
-        /* Validate it. */
-        if (!isexe(undo_bin))
+        /*
+         * Check that it exists and it is an executable.
+         * These strcpy and strcat calls should be safe, as we already know that
+         * both dir and undo_bin are no longer than PATH_MAX-1 and the buf's size
+         * is PATH_MAX*2.
+         */
+        strcpy(buf, dir);
+        strcat(buf, undo_bin);
+        if (!isexe(buf))
             ERROR_EXIT("error: %s is not an executable.\n", undo_bin);
 
         DEBUG("undo_bin=%s\n", undo_bin);
     }
 
-    /* Get current namespace's file descriptor. */
+    /* Get current namespace's file descriptor. It may be needed later
+     * for voidnsundo. */
     nsfd = open("/proc/self/ns/mnt", O_RDONLY);
     if (nsfd == -1)
         ERROR_EXIT("error: failed to acquire mount namespace's fd.%s\n",
                    strerror(errno));
 
     /* Check socket directory. */
-    strncpy(buf, SOCK_PATH, PATH_MAX);
+    /* TODO: fix invalid permissions, or just die in that case. */
+
+    /* This should be safe, SOCK_PATH is hardcoded in config.h and it's definitely
+     * smaller than buffer. */
+    strcpy(buf, SOCK_PATH);
+
     char *sock_dir = dirname(buf);
     if (access(sock_dir, F_OK) == -1) {
         if (mkdir(sock_dir, 0700) == -1)
@@ -224,11 +250,12 @@ int main(int argc, char **argv)
     }
     DEBUG("sock_dir=%s\n", sock_dir);
 
-    /* Get current working directory. */
+    /* Get current working directory. Will need to restore it later in the
+     * new mount namespace. */
     getcwd(cwd, PATH_MAX);
     DEBUG("cwd=%s\n", cwd);
 
-    /* Do the unshare magic. */
+    /* Create new mount namespace. */
     if (unshare(CLONE_NEWNS) == -1)
         ERROR_EXIT("unshare: %s\n", strerror(errno));
 
@@ -237,7 +264,7 @@ int main(int argc, char **argv)
     if (mount_dirs(dir, dirlen, &user_mounts) < user_mounts.end && !ignore_missing)
         ERROR_EXIT("error: some mounts failed.\n");
 
-    /* Then necessary stuff. */
+    /* Then the necessary stuff. */
     struct strarray default_mounts;
     strarray_alloc(&default_mounts, 3);
     strarray_append(&default_mounts, "/usr");
@@ -248,16 +275,36 @@ int main(int argc, char **argv)
     if (mount_dirs(dir, dirlen, &default_mounts) < default_mounts.end)
         ERROR_EXIT("error: some necessary mounts failed.\n");
 
-    /* Bind mount undo binary. */
-    if (mount_undo(undo_bin, &undo_mounts, &tounlink) < undo_mounts.end
+    /* Now lets do bind mounts of voidnsundo (if needed). */
+    if (mount_undo(undo_bin, &undo_mounts, &to_unlink) < undo_mounts.end
             && !ignore_missing)
         ERROR_EXIT("error: some undo mounts failed.\n");
 
-    /* Mount sock_dir as tmpfs. It will only be visible in this namespace. */
+    /* Mount socket directory as tmpfs. It will only be visible in this namespace,
+     * and the socket file will also be available from this namespace only.*/
     if (mount("tmpfs", sock_dir, "tmpfs", 0, "size=4k,mode=0700,uid=0,gid=0") == -1)
         ERROR_EXIT("mount: error mounting tmpfs in %s.\n", sock_dir);
 
-    /* Fork. */
+    /*
+     * Fork. We need it because we need to preserve file descriptor of the
+     * original namespace.
+     *
+     * Linux doesn't allow to bind mount /proc/self/ns/mnt from the original
+     * namespace in the child namespace because that would lead to dependency
+     * loop. So I came up with another solution.
+     *
+     * Unix sockets are capable of passing file descriptors. We need to start a
+     * server that will listen on a unix socket and pass the namespace's file
+     * descriptor to connected clients over this socket. voidnsundo will connect
+     * to the socket, receive the file descriptor and perform the setns() system
+     * call.
+     *
+     * We also need to make sure the socket will only be accessible by root.
+     * The path to the socket should be hardcoded.
+     *
+     * So we fork(), start the server in the child process, while the parent
+     * drops root privileges and runs the programs it was asked to run.
+     */
     pid_t ppid_before_fork = getpid();
     pid = fork();
     if (pid == -1)
@@ -266,18 +313,24 @@ int main(int argc, char **argv)
     forked = true;
 
     if (pid == 0) {
-        /* Catch SIGTERM. */
+        /* This is the child process.
+         * Catch SIGTERM: it will be sent here when parent dies. The signal will
+         * interrupt the accept() call, so we can clean up and exit immediately.
+         */
         struct sigaction sa = {0};
         sa.sa_handler = onterm;
         sigaction(SIGTERM, &sa, NULL);
 
-        /* Ignore SIGINT. */
+        /* Ignore SIGINT. Otherwise it will be affected by Ctrl+C in the parent
+         * process. */
         signal(SIGINT, SIG_IGN);
 
         /* Set the child to get SIGTERM when parent thread dies. */
         int r = prctl(PR_SET_PDEATHSIG, SIGTERM);
         if (r == -1)
             ERROR_EXIT("prctl: %s\n", strerror(errno));
+
+        /* Maybe it already has died? */
         if (getppid() != ppid_before_fork)
             ERROR_EXIT("error: parent has died already.\n");
 
@@ -288,13 +341,17 @@ int main(int argc, char **argv)
 
         struct sockaddr_un sock_addr = {0};
         sock_addr.sun_family = AF_UNIX;
-        strncpy(sock_addr.sun_path, SOCK_PATH, 108);
+
+        /* The size of sun_path is 108 bytes, our SOCK_PATH is definitely
+         * smaller. */
+        strcpy(sock_addr.sun_path, SOCK_PATH);
 
         if (bind(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1)
             ERROR_EXIT("bind: %s\n", strerror(errno));
 
         listen(sock_fd, 1);
 
+        /* Accept incoming connections until SIGTERM. */
         while (!term_caught) {
             sock_conn = accept(sock_fd, NULL, 0);
             if (sock_conn == -1)
@@ -336,9 +393,11 @@ end:
     if (dirptr != NULL)
         closedir(dirptr);
 
-    if (tounlink.end > 0 && (!forked || pid == 0)) {
-        for (size_t i = 0; i < tounlink.end; i++) {
-            char *path = undo_mounts.list[tounlink.list[i]];
+    /* If we created some empty files to bind the voidnsundo utility,
+     * delete them here. */
+    if (to_unlink.end > 0 && (!forked || pid == 0)) {
+        for (size_t i = 0; i < to_unlink.end; i++) {
+            char *path = undo_mounts.list[to_unlink.list[i]];
             if (umount(path) == -1)
                 DEBUG("umount(%s): %s\n", path, strerror(errno));
             if (unlink(path) == -1)

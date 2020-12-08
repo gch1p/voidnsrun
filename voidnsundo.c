@@ -80,7 +80,10 @@ int main(int argc, char **argv)
 
     struct sockaddr_un sock_addr = {0};
     sock_addr.sun_family  = AF_UNIX;
-    strncpy(sock_addr.sun_path, SOCK_PATH, 108);
+
+    /* The size of sun_path is 108 bytes, our SOCK_PATH is definitely
+     * smaller. */
+    strcpy(sock_addr.sun_path, SOCK_PATH);
 
     if (connect(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1)
         ERROR_EXIT("connect: %s\n", strerror(errno));
@@ -89,6 +92,7 @@ int main(int argc, char **argv)
     if (!nsfd)
         ERROR_EXIT("error: failed to get nsfd.\n");
 
+    /* Change namespace. */
     if (setns(nsfd, CLONE_NEWNS) == -1)
         ERROR_EXIT("setns: %s.\n", strerror(errno));
 

@@ -92,7 +92,7 @@ Options:
 "container"), it can read it from the `VOIDNSRUN_DIR` environment variable or
 you can use `-r` argument to specify it.
 
-By default, **voidnsrun** binds only `/usr` from the container.  But if you're
+By default, **voidnsrun** binds only `/usr` from the container. But if you're
 launching `xbps-install`, `xbps-remove` or `xbps-reconfigure`and using
 **voidnsrun** version 1.1 or higher, it will bind `/usr`, `/var` and `/etc`.
 
@@ -121,8 +121,8 @@ Options:
 
 **voidnsundo** can be used in two modes.
 
-One is the **"normal" node**, when you  invoke it like `voidnsundo <PROGRAM> [ARGS]`
-and your `PROGRAM` will be launched  from and in the original mount namespace. 
+One is the **"normal" node**, when you invoke it like `voidnsundo <PROGRAM> [ARGS]`
+and your `PROGRAM` will be launched from and in the original mount namespace. 
 
 For example, if you don't have a glibc version of firefox installed (so there's
 no `/usr/bin/firefox` in the container), but you want to launch the "real" (the
@@ -262,10 +262,10 @@ generally bad, it's a common attack vector that allows local privilege
 escalation by exploiting unsafe code of setuid programs.
 
 While these utilities have been written with this thought in mind, don't trust
-me. Read the code, it's not too big. Place yourself in attacker's shoes and try
-to find a hole. For every new discovered vulnerability in these utilities that
-would allow privilege escalation or something similar I promise to pay $25 in
-Bitcoin. Contact me if you find something.
+me. Read the code, it's not too big and it's commented. Place yourself in
+attacker's shoes and try to find a hole. For every new discovered vulnerability
+in these utilities that would allow privilege escalation or something similar I
+promise to pay $25 in Bitcoin. Contact me if you find something.
 
 ## Changelog
 
