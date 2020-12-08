@@ -34,12 +34,11 @@ void usage(const char *progname)
             "    -r <path>: Container path. When this option is not present,\n"
             "               " CONTAINER_DIR_VAR " environment variable is used.\n"
             "    -m <path>: Add bind mount. You can add up to %d paths.\n"
-            "    -u <path>: Add undo utility bind mount. You can add up to %d paths.\n"
-            "    -U <path>: Undo program path. When this option is not present,\n"
+            "    -u <path>: Add undo bind mount. You can add up to %d paths.\n"
+            "    -U <path>: Path to " VOIDNSUNDO_NAME ". When this option is not present,\n"
             "               " UNDO_BIN_VAR " environment variable is used.\n"
-            "    -i:        Don't treat missing source or target for an added mount\n"
-            "               as an error.\n"
-            "    -V:        Verbose output.\n"
+            "    -i:        Don't treat missing source or target for added mounts as error.\n"
+            "    -V:        Enable verbose output.\n"
             "    -h:        Print this help.\n"
             "    -v:        Print version.\n",
            USER_LISTS_MAX, USER_LISTS_MAX);

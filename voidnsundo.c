@@ -24,9 +24,9 @@ void usage(const char *progname)
     printf("Usage: %s [OPTIONS] PROGRAM [ARGS]\n", progname);
     printf("\n"
            "Options:\n"
-           "    -V:        Verbose output.\n"
-           "    -h:        Print this help.\n"
-           "    -v:        Print version.\n");
+           "    -V:  Enable verbose output.\n"
+           "    -h:  Print this help.\n"
+           "    -v:  Print version.\n");
 }
 
 int main(int argc, char **argv)

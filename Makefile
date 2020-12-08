@@ -6,15 +6,13 @@ LDFLAGS =
 INSTALL = /usr/bin/env install
 PREFIX	= /usr/local
 
-all: voidnsrun voidnsundo
-
 test: testserver testclient
 
-voidnsrun: voidnsrun.o utils.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+run: voidnsrun.o utils.o
+	$(CC) $(CFLAGS) -o voidnsrun $^ $(LDFLAGS)
 
-voidnsundo: voidnsundo.o utils.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+undo: voidnsundo.o utils.o
+	$(CC) $(CFLAGS) -o voidnsundo $^ $(LDFLAGS)
 
 testserver: test/testserver.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
@@ -22,9 +20,13 @@ testserver: test/testserver.o utils.o
 testclient: test/testclient.o utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-install: voidnsrun voidnsundo
-	$(INSTALL) voidnsrun voidnsundo $(PREFIX)/bin
-	chmod u+s $(PREFIX)/bin/voidnsrun $(PREFIX)/bin/voidnsundo
+install-run: run
+	$(INSTALL) voidnsrun $(PREFIX)/bin
+	chmod u+s $(PREFIX)/bin/voidnsrun
+
+install-undo: undo
+	$(INSTALL) voidnsundo $(PREFIX)/bin
+	chmod u+s $(PREFIX)/bin/voidnsundo
 
 clean:
 	rm -f *.o test/*.o voidnsrun voidnsundo testserver testclient
@@ -32,4 +34,4 @@ clean:
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -I. -o $@
 
-.PHONY: all install clean distclean
+.PHONY: run undo install-run install-undo clean
