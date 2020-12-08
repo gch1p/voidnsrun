@@ -6,6 +6,12 @@ LDFLAGS =
 INSTALL = /usr/bin/env install
 PREFIX	= /usr/local
 
+all:
+	@echo make run: build voidnsrun.
+	@echo make install-run: install voidnsrun to $(PREFIX).
+	@echo make undo: build voidnsundo.
+	@echo make install-undo: install voidnsundo to $(PREFIX).
+
 test: testserver testclient
 
 run: voidnsrun.o utils.o
@@ -34,4 +40,4 @@ clean:
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -I. -o $@
 
-.PHONY: run undo install-run install-undo clean
+.PHONY: all run undo install-run install-undo clean
