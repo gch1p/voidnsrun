@@ -19,6 +19,4 @@ extern bool g_verbose;
         goto end; \
     }
 
-#define SOCK_DIR_PATH_MAX (108 - strlen(SOCK_NAME) - 1)
-
 #endif //VOIDNSRUN_MACROS_H
