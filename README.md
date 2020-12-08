@@ -269,6 +269,10 @@ promise to pay $25 in Bitcoin. Contact me if you find something.
 
 ## Changelog
 
+#### 1.2.1
+
+- Minor code fixes, nothing serious.
+
 #### 1.2
 
 - Added **voidnsundo** utility for spawning programs in the parent mount

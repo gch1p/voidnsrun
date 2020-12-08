@@ -1,7 +1,7 @@
 #ifndef VOIDNSRUN_CONFIG_H
 #define VOIDNSRUN_CONFIG_H
 
-#define PROG_VERSION "1.2"
+#define PROG_VERSION "1.2.1"
 
 #define USER_LISTS_MAX 50
 
