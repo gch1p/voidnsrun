@@ -20,6 +20,8 @@ bool isdir(const char *s);
 bool isexe(const char *s);
 bool exists(const char *s);
 bool mkfile(const char *s);
+bool startswith(const char *haystack, const char *needle);
+mode_t getmode(const char *s);
 
 int send_fd(int sock, int fd);
 int recv_fd(int sock);

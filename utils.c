@@ -43,6 +43,19 @@ bool mkfile(const char *s)
     return true;
 }
 
+mode_t getmode(const char *s)
+{
+    struct stat st;
+    if (stat(s, &st) == -1)
+        return 0;
+    return st.st_mode;
+}
+
+bool startswith(const char *haystack, const char *needle)
+{
+    return strncmp(haystack, needle, strlen(needle)) == 0;
+}
+
 int send_fd(int sock, int fd)
 {
     struct msghdr msg = {0};

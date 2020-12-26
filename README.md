@@ -80,6 +80,7 @@ Options:
                VOIDNSRUN_DIR environment variable is used.
     -m <path>: Add bind mount. You can add up to 50 paths.
     -u <path>: Add undo bind mount. You can add up to 50 paths.
+    -d <path>: Add /usr subdirectory bind mount.
     -U <path>: Path to voidnsundo. When this option is not present,
                VOIDNSUNDO_BIN environment variable is used.
     -i:        Don't treat missing source or target for added mounts as error.
@@ -98,6 +99,12 @@ launching `xbps-install`, `xbps-remove` or `xbps-reconfigure`and using
 
 To bind something else, use the `-m` option. You can add up to 50 binds as of
 version 1.2.
+
+To bind a subdirectory from the host `/usr`, use the `-d` option (available
+since version 1.3). For example, instead of installing fonts into the container
+and therefore duplicating them and wasting your disk space, you can bind-mount
+`/usr/share/fonts` from the host. The rest of `/usr/` will be from the glibc
+container.
 
 There's also the `-u` option. It adds bind mounts of the **voidnsundo** binary
 inside the namespace. See more about this below in the **voidnsundo** bind mode
@@ -251,8 +258,8 @@ A: If you installed fonts on your main system, applications that run in the moun
 namespace can't see them because of custom `/usr` directory. You need to install
 them again into the container directory.
 
-Some workaround to bind-mount `/usr/share/fonts` from the root system to the
-namespace may be introduced in future, if Linux will allow such hacks.
+Since 1.3, it's possible to bind-mount `/usr/share/fonts` or other directorires
+from the host to the mount namespace. Use the `-d` option for that.
 
 ## Security
 
@@ -268,6 +275,10 @@ in these utilities that would allow privilege escalation or something similar I
 promise to pay $25 in Bitcoin. Contact me if you find something.
 
 ## Changelog
+
+#### 1.3
+
+- Added the `-d` option to bind mount subdirectories from the host `/usr`.
 
 #### 1.2.1
 
