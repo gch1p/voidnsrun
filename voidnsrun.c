@@ -503,7 +503,7 @@ end:
             /* This call always fails with EBUSY and I don't know why.
              * We can safely ignore any errors here (I hope) because
              * the mount namespace will be destroyed as soon as there
-             * will be no more processes attached to it. */
+             * will be no processes attached to it. */
             umount(OLDROOT);
             /*if (umount(OLDROOT) == -1)
                 ERROR("umount(%s): %s\n", OLDROOT, strerror(errno));*/
