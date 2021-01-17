@@ -4,7 +4,7 @@
 with alternative `/usr` tree. Its primary goal is to run glibc programs in
 musl-libc Void Linux environments (or vice-versa, but who needs that?).
 
-It creates a new private mount namespace, transparently substitutes `/usr` and 
+It creates a new private mount namespace, transparently substitutes `/usr` and
 some other directories with directories from your glibc container using bind
 mounts, and launches your program.
 
@@ -71,7 +71,7 @@ Type `exit` or `Ctrl+D` to exit the container.
 
 ## Usage
 
-### voidnsrun 
+### voidnsrun
 ```
 Usage: voidnsrun [OPTIONS] PROGRAM [ARGS]
 
@@ -129,7 +129,7 @@ Options:
 **voidnsundo** can be used in two modes.
 
 One is the **"normal" node**, when you invoke it like `voidnsundo <PROGRAM> [ARGS]`
-and your `PROGRAM` will be launched from and in the original mount namespace. 
+and your `PROGRAM` will be launched from and in the original mount namespace.
 
 For example, if you don't have a glibc version of firefox installed (so there's
 no `/usr/bin/firefox` in the container), but you want to launch the "real" (the
@@ -200,7 +200,7 @@ $ voidnsrun /opt/vivaldi/vivaldi
 /opt/vivaldi/vivaldi: error while loading shared libraries: libnss3.so: cannot open shared object file: No such file or directory
 ```
 
-As you can see, it no longer complains about missing `libgobject-2.0.so.0`, now 
+As you can see, it no longer complains about missing `libgobject-2.0.so.0`, now
 it's `libnss3.so`. Repeat steps above for all missing dependencies, and in the
 end, it will work.
 
@@ -231,7 +231,7 @@ window, it will work, but... it will not be the shell you expect, it will be
 glibc-linked shell from the container. Some programs that you have
 installed on your root musl system will not be available there (like, it won't be
 able to launch a browser because there's no browser), other may not work as
-expected. 
+expected.
 
 In general, all programs that launch other programs will suffer from this. To
 overcome this, the **voidnsundo** utility has been written and `-u` option added
@@ -276,6 +276,10 @@ promise to pay $25 in Bitcoin. Contact me if you find something.
 
 ## Changelog
 
+#### 1.3.1
+
+- Bug fixes.
+
 #### 1.3
 
 - Added the `-d` option to bind mount subdirectories from the host `/usr`.
@@ -292,7 +296,7 @@ promise to pay $25 in Bitcoin. Contact me if you find something.
 
 #### 1.1
 
-- Bind whole `/etc` and `/var` when launching `xbps-install`, `xbps-remove` or 
+- Bind whole `/etc` and `/var` when launching `xbps-install`, `xbps-remove` or
   `xbps-reconfigure`.
 
 #### 1.0
