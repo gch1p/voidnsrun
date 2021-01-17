@@ -273,25 +273,6 @@ int main(int argc, char **argv)
         ERROR_EXIT("error: failed to acquire mount namespace's fd.%s\n",
                    strerror(errno));
 
-    /* Check socket directory. */
-    /* TODO: fix invalid permissions, or just die in that case. */
-
-    /* This should be safe, SOCK_PATH is hardcoded in config.h and it's definitely
-     * smaller than buffer. */
-    strcpy(buf, SOCK_PATH);
-
-    char *sock_dir = dirname(buf);
-    if (access(sock_dir, F_OK) == -1) {
-        if (mkdir(sock_dir, 0700) == -1)
-            ERROR_EXIT("error: failed to create %s directory.\n", sock_dir);
-    } else {
-        if ((dirptr = opendir(sock_dir)) == NULL)
-            ERROR_EXIT("error: %s is not a directory.\n", sock_dir);
-        if (exists(SOCK_PATH) && unlink(SOCK_PATH) == -1)
-            ERROR_EXIT("failed to unlink %s: %s", SOCK_PATH, strerror(errno));
-    }
-    DEBUG("sock_dir=%s\n", sock_dir);
-
     /* Get current working directory. Will need to restore it later in the
      * new mount namespace. */
     getcwd(cwd, PATH_MAX);
@@ -346,10 +327,29 @@ int main(int argc, char **argv)
             && !ignore_missing)
         ERROR_EXIT("error: some undo mounts failed.\n");
 
+    /* Check socket directory. */
+    /* TODO: fix invalid permissions, or just die in that case. */
+
+    /* This should be safe, SOCK_PATH is hardcoded in config.h and it's definitely
+     * smaller than buffer. */
+    strcpy(buf, SOCK_PATH);
+
+    char *sock_dir = dirname(buf);
+    if (access(sock_dir, F_OK) == -1) {
+        if (mkdir(sock_dir, 0700) == -1)
+            ERROR_EXIT("error: failed to create %s directory.\n", sock_dir);
+    } else {
+        if ((dirptr = opendir(sock_dir)) == NULL)
+            ERROR_EXIT("error: %s is not a directory.\n", sock_dir);
+        if (exists(SOCK_PATH) && unlink(SOCK_PATH) == -1)
+            ERROR_EXIT("failed to unlink %s: %s", SOCK_PATH, strerror(errno));
+    }
+    DEBUG("sock_dir=%s\n", sock_dir);
+
     /* Mount socket directory as tmpfs. It will only be visible in this namespace,
      * and the socket file will also be available from this namespace only.*/
     if (mount("tmpfs", sock_dir, "tmpfs", 0, "size=4k,mode=0700,uid=0,gid=0") == -1)
-        ERROR_EXIT("mount: error mounting tmpfs in %s.\n", sock_dir);
+        ERROR_EXIT("mount: error mounting tmpfs in %s: %s.\n", sock_dir, strerror(errno));
 
     /*
      * Fork. We need it because we need to preserve file descriptor of the
