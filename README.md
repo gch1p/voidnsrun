@@ -272,7 +272,7 @@ While these utilities have been written with this thought in mind, don't trust
 me. Read the code, it's not too big and it's commented. Place yourself in
 attacker's shoes and try to find a hole. For every new discovered vulnerability
 in these utilities that would allow privilege escalation or something similar I
-promise to pay $25 in Bitcoin. Contact me if you find something.
+promise to pay $100 in Bitcoin. Contact me if you find something.
 
 ## Changelog
 
