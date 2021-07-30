@@ -120,7 +120,8 @@ bool isxbpscommand(const char *s)
         "/xbps-install",
         "/xbps-remove",
         "/xbps-reconfigure",
-        "/xbps-query"
+        "/xbps-query",
+        "/xbps-pkgdb",
     };
     for (size_t i = 0; i < ARRAY_SIZE(commands); i++) {
         const char *command = commands[i];
