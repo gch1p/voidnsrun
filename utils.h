@@ -2,6 +2,7 @@
 #define VOIDNSRUN_UTILS_H
 
 #include <stdbool.h>
+#include <sys/stat.h>
 #include "config.h"
 
 struct strarray {
