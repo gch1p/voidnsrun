@@ -19,7 +19,7 @@ As per the [Void documentation](https://docs.voidlinux.org/installation/musl.htm
 perform glibc base system installation to a separate new directory:
 ```
 # mkdir /glibc
-# XBPS_ARCH=x86_64 xbps-install --repository=http://alpha.de.repo.voidlinux.org/current -r /glibc -S base-voidstrap
+# XBPS_ARCH=x86_64 xbps-install --repository=https://repo-default.voidlinux.org/current -r /glibc -S base-voidstrap
 ```
 
 ### Installing voidnsrun
