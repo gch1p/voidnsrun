@@ -26,30 +26,28 @@
 volatile sig_atomic_t term_caught = 0;
 bool g_verbose = false;
 
-void usage(const char *progname)
-{
+void usage(const char *progname) {
     printf("Usage: %s [OPTIONS] PROGRAM [ARGS]\n", progname);
     printf("\n"
-            "Options:\n"
-            "    -r <path>: Container path. When this option is not present,\n"
-            "               " CONTAINER_DIR_VAR " environment variable is used.\n"
-            "    -m <path>: Add bind mount. You can add up to %d paths.\n"
-            "    -u <path>: Add undo bind mount. You can add up to %d paths.\n"
-            "    -d <path>: Add /usr subdirectory bind mount.\n"
-            "    -U <path>: Path to " VOIDNSUNDO_NAME ". When this option is not present,\n"
-            "               " UNDO_BIN_VAR " environment variable is used.\n"
-            "    -i:        Don't treat missing source or target for added mounts as error.\n"
-            "    -V:        Enable verbose output.\n"
-            "    -h:        Print this help.\n"
-            "    -v:        Print version.\n",
+           "Options:\n"
+           "    -r <path>: Container path. When this option is not present,\n"
+           "               " CONTAINER_DIR_VAR " environment variable is used.\n"
+           "    -m <path>: Add bind mount. You can add up to %d paths.\n"
+           "    -u <path>: Add undo bind mount. You can add up to %d paths.\n"
+           "    -d <path>: Add /usr subdirectory bind mount.\n"
+           "    -U <path>: Path to " VOIDNSUNDO_NAME ". When this option is not present,\n"
+           "               " UNDO_BIN_VAR " environment variable is used.\n"
+           "    -i:        Don't treat missing source or target for added mounts as error.\n"
+           "    -V:        Enable verbose output.\n"
+           "    -h:        Print this help.\n"
+           "    -v:        Print version.\n",
            USER_LISTS_MAX, USER_LISTS_MAX);
 }
 
 size_t mount_dirs(const char *source_prefix,
                   size_t source_prefix_len,
                   struct strarray *targets,
-                  struct intarray *created)
-{
+                  struct intarray *created) {
     char buf[PATH_MAX];
     int successful = 0;
     mode_t mode;
@@ -95,7 +93,7 @@ size_t mount_dirs(const char *source_prefix,
             continue;
         }
 
-        if (mount(buf, targets->list[i], NULL, MS_BIND|MS_REC, NULL) == -1)
+        if (mount(buf, targets->list[i], NULL, MS_BIND | MS_REC, NULL) == -1)
             ERROR("mount: failed to mount %s: %s\n", targets->list[i], strerror(errno));
         else
             successful++;
@@ -105,8 +103,7 @@ size_t mount_dirs(const char *source_prefix,
 
 size_t mount_undo(const char *source,
                   const struct strarray *targets,
-                  struct intarray *created)
-{
+                  struct intarray *created) {
     int successful = 0;
     for (size_t i = 0; i < targets->end; i++) {
         /* If the mount point does not exist, create an empty file, otherwise
@@ -122,21 +119,19 @@ size_t mount_undo(const char *source,
         DEBUG("%s: source=%s, target=%s\n", __func__, source, targets->list[i]);
         if (mount(source, targets->list[i], NULL, MS_BIND, NULL) == -1)
             ERROR("mount: failed to mount %s to %s: %s",
-                 source, targets->list[i], strerror(errno));
+              source, targets->list[i], strerror(errno));
         else
             successful++;
     }
     return successful;
 }
 
-void onterm(int sig)
-{
+void onterm(int sig) {
     UNUSED(sig);
     term_caught = 1;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc < 2) {
         usage(argv[0]);
         return 0;
@@ -144,7 +139,7 @@ int main(int argc, char **argv)
 
     int nsfd = -1;
     char *dir = NULL;
-    char buf[PATH_MAX*2];
+    char buf[PATH_MAX * 2];
     char *undo_bin = NULL;
     int sock_fd = -1, sock_conn = -1;
     size_t dirlen;
@@ -155,6 +150,8 @@ int main(int argc, char **argv)
     bool forked = false;
     pid_t pid = 0;
     char cwd[PATH_MAX];
+    bool oldroot_mounted = false;
+    bool usr_preserved = false;
 
     struct strarray user_mounts;
     strarray_alloc(&user_mounts, USER_LISTS_MAX);
@@ -177,43 +174,43 @@ int main(int argc, char **argv)
 
     while ((c = getopt(argc, argv, "vhm:r:u:U:iVd:")) != -1) {
         switch (c) {
-        case 'v':
-            printf("%s\n", PROG_VERSION);
-            return 0;
-        case 'h':
-            usage(argv[0]);
-            return 0;
-        case 'i':
-            ignore_missing = true;
-            break;
-        case 'r':
-            dir = optarg;
-            break;
-        case 'U':
-            undo_bin = optarg;
-            break;
-        case 'V':
-            g_verbose = true;
-            break;
-        case 'm':
-            if (!strarray_append(&user_mounts, optarg))
-                ERROR_EXIT("error: only up to %lu user mounts allowed.\n",
+            case 'v':
+                printf("%s\n", PROG_VERSION);
+                return 0;
+            case 'h':
+                usage(argv[0]);
+                return 0;
+            case 'i':
+                ignore_missing = true;
+                break;
+            case 'r':
+                dir = optarg;
+                break;
+            case 'U':
+                undo_bin = optarg;
+                break;
+            case 'V':
+                g_verbose = true;
+                break;
+            case 'm':
+                if (!strarray_append(&user_mounts, optarg))
+                    ERROR_EXIT("error: only up to %lu user mounts allowed.\n",
                            user_mounts.size);
-            break;
-        case 'u':
-            if (!strarray_append(&undo_mounts, optarg))
-                ERROR_EXIT("error: only up to %lu user mounts allowed.\n",
+                break;
+            case 'u':
+                if (!strarray_append(&undo_mounts, optarg))
+                    ERROR_EXIT("error: only up to %lu user mounts allowed.\n",
                            undo_mounts.size);
-            break;
-        case 'd':
-            if (!startswith(optarg, "/usr/"))
-                ERROR_EXIT("only subdirectories of /usr are allowed for bind mounting this way.\n");
-            if (!strarray_append(&dir_mounts, optarg))
-                ERROR_EXIT("error: only up to %lu dir mounts allowed.\n",
+                break;
+            case 'd':
+                if (!startswith(optarg, "/usr/"))
+                    ERROR_EXIT("only subdirectories of /usr are allowed for bind mounting this way.\n");
+                if (!strarray_append(&dir_mounts, optarg))
+                    ERROR_EXIT("error: only up to %lu dir mounts allowed.\n",
                            dir_mounts.size);
                 break;
-        case '?':
-            return 1;
+            case '?':
+                return 1;
         }
     }
 
@@ -227,7 +224,7 @@ int main(int argc, char **argv)
         dir = getenv(CONTAINER_DIR_VAR);
     if (!dir)
         ERROR_EXIT("error: environment variable %s not found.\n",
-             CONTAINER_DIR_VAR);
+               CONTAINER_DIR_VAR);
 
     /* Validate it. */
     if (!isdir(dir))
@@ -245,7 +242,7 @@ int main(int argc, char **argv)
             undo_bin = getenv(UNDO_BIN_VAR);
         if (!undo_bin) {
             ERROR_EXIT("error: environment variable %s not found.\n",
-                UNDO_BIN_VAR);
+                       UNDO_BIN_VAR);
         }
 
         size_t undo_bin_len = strlen(undo_bin);
@@ -271,7 +268,7 @@ int main(int argc, char **argv)
     nsfd = open("/proc/self/ns/mnt", O_RDONLY);
     if (nsfd == -1)
         ERROR_EXIT("error: failed to acquire mount namespace's fd.%s\n",
-                   strerror(errno));
+               strerror(errno));
 
     /* Get current working directory. Will need to restore it later in the
      * new mount namespace. */
@@ -293,17 +290,26 @@ int main(int argc, char **argv)
         if (mode == 0)
             ERROR_EXIT("error: failed to get mode of /usr.\n");
 
+        /* The tmpfs mount target must exist. */
+        if (!exists(OLDROOT)) {
+            if (mkdir(OLDROOT, 0700) == -1)
+                ERROR_EXIT("error: failed to create %s: %s.\n",
+                       OLDROOT, strerror(errno));
+        }
+
         if (mount("tmpfs", OLDROOT, "tmpfs", 0, "size=4k,mode=0700,uid=0,gid=0") == -1)
-            ERROR_EXIT("mount: error mounting tmpfs in %s.\n", OLDROOT);
+            ERROR_EXIT("mount: error mounting tmpfs in %s: %s.\n", OLDROOT, strerror(errno));
+        oldroot_mounted = true;
 
         strcpy(buf, OLDROOT);
         strcat(buf, "/usr");
         if (mkdir(buf, mode) == -1)
             ERROR_EXIT("error: failed to mkdir %s: %s.\n", buf, strerror(errno));
 
-        if (mount("/usr", buf, NULL, MS_BIND|MS_REC, NULL) == -1)
-            ERROR_EXIT("error: failed to mount /usr at %s: %s.",
-                       buf, strerror(errno));
+        if (mount("/usr", buf, NULL, MS_BIND | MS_REC, NULL) == -1)
+            ERROR_EXIT("error: failed to mount /usr at %s: %s.\n",
+                   buf, strerror(errno));
+        usr_preserved = true;
     }
 
     /* Then the necessary stuff. */
@@ -319,12 +325,12 @@ int main(int argc, char **argv)
 
     /* Mount /usr subdirectories if needed. */
     if (dir_mounts.end > 0
-            && mount_dirs(OLDROOT, strlen(OLDROOT), &dir_mounts, &created_dirs) < dir_mounts.end)
+        && mount_dirs(OLDROOT, strlen(OLDROOT), &dir_mounts, &created_dirs) < dir_mounts.end)
         ERROR_EXIT("error: some dir mounts failed.\n");
 
     /* Now lets do bind mounts of voidnsundo (if needed). */
     if (mount_undo(undo_bin, &undo_mounts, &created_undos) < undo_mounts.end
-            && !ignore_missing)
+        && !ignore_missing)
         ERROR_EXIT("error: some undo mounts failed.\n");
 
     /* Check socket directory. */
@@ -412,7 +418,7 @@ int main(int argc, char **argv)
          * smaller. */
         strcpy(sock_addr.sun_path, SOCK_PATH);
 
-        if (bind(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1)
+        if (bind(sock_fd, (struct sockaddr *) &sock_addr, sizeof(sock_addr)) == -1)
             ERROR_EXIT("bind: %s\n", strerror(errno));
 
         listen(sock_fd, 1);
@@ -440,7 +446,7 @@ int main(int argc, char **argv)
             DEBUG("chdir: %s\n", strerror(errno));
 
         /* Launch program. */
-        if (execvp(argv[optind], (char *const *)argv+optind) == -1)
+        if (execvp(argv[optind], (char *const *) argv + optind) == -1)
             ERROR_EXIT("execvp(%s): %s\n", argv[optind], strerror(errno));
     }
 
@@ -476,29 +482,31 @@ end:
 
         /* If we had to create mount tmpfs to /oldroot and do other
          * dirty hacks related to /usr subdirs bind mounting, clean up here. */
-        if (dir_mounts.end > 0) {
-            for (size_t i = 0; i < dir_mounts.end; i++) {
-                char *path = dir_mounts.list[i];
-                if (umount(path) == -1)
-                    ERROR("umount(%s): %s\n", path, strerror(errno));
-            }
-
-            /* If we created some empty dirs to use them as mountpoints for
-             * bind mounts, delete them here. */
-            if (created_dirs.end > 0) {
-                for (size_t i = 0; i < created_dirs.end; i++) {
-                    char *path = dir_mounts.list[created_dirs.list[i]];
-                    if (rmdir(path) == -1)
-                        ERROR("rmdir(%s): %s\n", path, strerror(errno));
-                    else
-                        DEBUG("rmdir(%s)\n", path);
+        if (dir_mounts.end > 0 && oldroot_mounted) {
+            if (usr_preserved) {
+                for (size_t i = 0; i < dir_mounts.end; i++) {
+                    char *path = dir_mounts.list[i];
+                    if (umount(path) == -1)
+                        ERROR("umount(%s): %s\n", path, strerror(errno));
                 }
-            }
 
-            strcpy(buf, OLDROOT);
-            strcat(buf, "/usr");
-            if (umount(buf) == -1)
-                ERROR("umount(%s): %s\n", buf, strerror(errno));
+                /* If we created some empty dirs to use them as mountpoints for
+                 * bind mounts, delete them here. */
+                if (created_dirs.end > 0) {
+                    for (size_t i = 0; i < created_dirs.end; i++) {
+                        char *path = dir_mounts.list[created_dirs.list[i]];
+                        if (rmdir(path) == -1)
+                            ERROR("rmdir(%s): %s\n", path, strerror(errno));
+                        else
+                            DEBUG("rmdir(%s)\n", path);
+                    }
+                }
+
+                strcpy(buf, OLDROOT);
+                strcat(buf, "/usr");
+                if (umount(buf) == -1)
+                    ERROR("umount(%s): %s\n", buf, strerror(errno));
+            }
 
             /* This call always fails with EBUSY and I don't know why.
              * We can safely ignore any errors here (I hope) because
